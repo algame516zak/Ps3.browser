@@ -4,15 +4,16 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: ps3dev/ps3dev:latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Build
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Install PS3 SDK
         run: |
-          make clean
-          make
-      - name: Upload
+          # هذه الخطوة تجلب الأدوات مباشرة وتتجنب مشاكل الحاويات
+          docker run --rm -v $(pwd):/src -w /src ps3dev/ps3dev:latest sh -c "make clean && make"
+
+      - name: Upload PKG
         uses: actions/upload-artifact@v3
         with:
           name: Alout-Browser
