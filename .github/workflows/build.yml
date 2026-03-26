@@ -1,0 +1,53 @@
+# ═══════════════════════════════════════════════════════════════
+#  Alout PS3 Browser - GitHub Actions Build Workflow
+# ═══════════════════════════════════════════════════════════════
+
+name: Build Alout PS3 Browser
+
+# تشغيل البناء عند رفع الكود (Push) أو طلب دمج (Pull Request)
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    # استخدام حاوية تحتوي على أدوات تطوير بلايستيشن 3 (PSL1GHT SDK)
+    container:
+      image: ps3dev/ps3dev:latest
+
+    steps:
+      # 1. جلب الكود من المستودع
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # 2. إعداد الصلاحيات والتأكد من وجود المجلدات
+      - name: Prepare Environment
+        run: |
+          chmod +x -R .
+          mkdir -p Source
+
+      # 3. عملية التجميع (Compilation) باستخدام الـ Makefile
+      - name: Compile PKG
+        run: |
+          make clean
+          make
+
+      # 4. رفع ملف الـ PKG الناتج كـ Artifact لتحميله
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: Alout-Browser-Installation-File
+          path: "*.pkg"
+          if-no-files-found: error
+
+      # 5. (اختياري) رفع ملف الـ ELF للديبيج إذا حدث خطأ
+      - name: Upload Debug ELF
+        uses: actions/upload-artifact@v3
+        with:
+          name: Browser-Debug-ELF
+          path: "*.elf"
+          retention-days: 5
