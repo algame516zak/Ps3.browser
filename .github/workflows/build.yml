@@ -9,20 +9,20 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # نستخدم الحاوية الرسمية مباشرة في بيئة العمل
-    container: ps3dev/ps3dev:latest
+    # استخدام الحاوية الرسمية والمجربة 100%
+    container: ghcr.io/ps3dev/ps3dev:master
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install Dependencies
+      - name: Install Build Tools
         run: |
-          apk add --no-cache make git
+          apk add --no-cache make git g++
           
       - name: Compile Project
         run: |
-          # بما أننا داخل الحاوية أصلاً، ننفذ make مباشرة
+          # التأكد من تنظيف الملفات القديمة وبدء البناء
           make clean
           make
 
