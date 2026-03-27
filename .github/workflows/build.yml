@@ -1,0 +1,30 @@
+name: Build PS3 UltraBrowser
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Install PSL1GHT SDK
+        run: |
+          # سحب صورة Docker تحتوي على أدوات بناء PS3
+          docker pull bucanero/ps3dev:latest
+          
+      - name: Compile Project
+        run: |
+          # تشغيل عملية البناء داخل الحاوية مع مراعاة وجود Makefile في الجذر
+          docker run --rm -v $(pwd):/src -w /src bucanero/ps3dev:latest make
+
+      - name: Upload PKG Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: PS3-UltraBrowser-Package
+          path: ultrabrowser.pkg
