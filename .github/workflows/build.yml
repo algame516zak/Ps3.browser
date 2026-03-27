@@ -9,21 +9,25 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # نستخدم الحاوية الرسمية مباشرة في بيئة العمل
+    container: ps3dev/ps3dev:latest
+
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4 # تحديث إلى v4
+        uses: actions/checkout@v4
 
-      - name: Install PSL1GHT SDK
+      - name: Install Dependencies
         run: |
-          docker pull bucanero/ps3dev:latest
+          apk add --no-cache make git
           
       - name: Compile Project
         run: |
-          # تشغيل الماك فايل الذي يبحث في مجلد Source
-          docker run --rm -v $(pwd):/src -w /src bucanero/ps3dev:latest make
+          # بما أننا داخل الحاوية أصلاً، ننفذ make مباشرة
+          make clean
+          make
 
       - name: Upload PKG Artifact
-        uses: actions/upload-artifact@v4 # 👈 هذا هو التعديل المطلوب (تغيير v3 إلى v4)
+        uses: actions/upload-artifact@v4
         with:
           name: PS3-UltraBrowser-Package
           path: ultrabrowser.pkg
