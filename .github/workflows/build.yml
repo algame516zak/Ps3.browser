@@ -1,85 +1,45 @@
-# ═══════════════════════════════════════════════════════════════
-#  PS3 UltraBrowser - build.yml (نسخة مستوحاة من المخطط الورقي)
-# ═══════════════════════════════════════════════════════════════
-
-name: Build PS3 UltraBrowser
+name: Build PS3 UltraBrowser (mlafeldt Edition)
 
 on:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
   workflow_dispatch:
 
 env:
-  # إجبار الأكشن على استخدام Node 24 كما تطلب معايير 2026
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
-    name: بناء المشروع من مجلد Source
     runs-on: ubuntu-latest
+    # نستخدم الصورة التي وجدتها في بحثك الذكي
+    container: mlafeldt/ps3dev:latest
 
     steps:
-      # 1. تحميل الكود من المستودع
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 2. تثبيت أدوات البناء الأساسية
-      - name: Install Build Essentials
+      - name: Build Project
         run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake make gcc g++ git
-
-      # 3. إعداد بيئة PS3 وتجربة بناء الكود (الخطة البديلة الذكية)
-      - name: Compile Project
-        run: |
-          # الدخول إلى المجلد كما في الرسمة (S كبيرة)
+          # الدخول لمجلد Source (S كبيرة كما في رسمتك)
           cd Source
           
-          echo "🔨 جاري فحص وبناء الملفات الـ 11..."
+          # إعداد البيئة (هذه الصورة عادة تضع الأدوات في هذا المسار)
+          export PS3DEV=/usr/local/ps3dev
+          export PSL1GHT=$PS3DEV/psl1ght
+          export PATH=$PS3DEV/bin:$PS3DEV/ppu/bin:$PATH
           
-          # استخدام g++ للتحقق من سلامة الكود برمجياً (Syntax Check)
-          # هذه القائمة مطابقة تماماً لرسمتك الورقية
-          g++ -std=c++11 \
-              -DPLAYSTATION3 \
-              -DPS3_BUILD \
-              -w -fsyntax-only \
-              -I. \
-              main.cpp \
-              browser.cpp \
-              renderer.cpp \
-              network.cpp \
-              memory.cpp \
-              ui.cpp \
-              2>&1 | head -50 || true
+          echo "🔨 يبدأ البناء باستخدام أدوات mlafeldt..."
           
-          echo "✅ انتهت عملية الفحص بنجاح"
+          # محاولة البناء
+          make -f ../Makefile clean || true
+          make -f ../Makefile
 
-      # 4. محاولة تشغيل الـ Makefile الرئيسي
-      - name: Run Makefile
-        run: |
-          # التأكد من وجود الماك فايل في الجذر وتشغيله
-          if [ -f Makefile ]; then
-            make clean || true
-            make || echo "⚠️ تنبيه: يتطلب بناء PKG حقيقي وجود SDK كامل."
-          fi
-
-      # 5. رفع النتائج (Artifacts)
-      - name: Upload Build Artifacts
+      - name: Upload Result
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: PS3-Browser-Build-Output
+          name: PS3-UltraBrowser-mlafeldt
           path: |
-            Source/
-            Makefile
             *.pkg
             *.elf
-          if-no-files-found: warn
-
-      # 6. ملخص العملية
-      - name: Build Summary
-        run: |
-          echo "✅ تم فحص هيكل المجلد: Source"
-          echo "✅ تم التحقق من الملفات: main, browser, renderer, network, memory, ui"
+            Source/
