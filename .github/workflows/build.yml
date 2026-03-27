@@ -1,67 +1,48 @@
-name: Build PS3 UltraBrowser Final
+name: PS3 UltraBrowser Auto-Build
 
 on:
   push:
     branches: [ main, master ]
   workflow_dispatch:
 
-env:
-  # لضمان التوافق مع معايير GitHub لعام 2026
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   build:
     runs-on: ubuntu-latest
+    # هذه هي "الخطة السحرية": نستخدم بيئة جاهزة بداخلها كل الأدوات
+    container: ghcr.io/ps3dev/ps3dev:latest
+
     steps:
-      - name: Checkout Code
+      - name: تحميل ملفاتك الـ 11
         uses: actions/checkout@v4
 
-      - name: Setup PS3 Toolchain
+      - name: بناء المشروع (Compilation)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y make wget git python3 build-essential
-          
-          # تحميل الأدوات الرسمية لعام 2026 (النسخة المتوافقة مع Ubuntu)
-          echo "📥 جاري تحميل أدوات PS3DEV..."
-          wget -q https://github.com/ps3dev/ps3toolchain/releases/download/latest/ps3dev-ubuntu-latest.tar.gz
-          
-          # فك الضغط في المسار العالمي الموحد
-          sudo mkdir -p /usr/local/ps3dev
-          sudo tar -xzf ps3dev-ubuntu-latest.tar.gz -C /usr/local
-          
-      - name: Compile UltraBrowser
-        run: |
-          # 1. إعداد متغيرات البيئة (مهم جداً ليجد المترجم الملفات)
-          export PS3DEV=/usr/local/ps3dev
-          export PSL1GHT=$PS3DEV/psl1ght
-          export PATH=$PS3DEV/bin:$PS3DEV/ppu/bin:$PATH
-          
-          # 2. الدخول لمجلد Source (S كبيرة كما في رسمتك)
+          # الدخول لمجلد Source (S كبيرة كما في رسمتك)
           cd Source
           
-          echo "🔨 يبدأ البناء الآن..."
+          echo "🔨 جاري تحويل الملفات الـ 11 إلى تطبيق PS3..."
           
-          # 3. تشغيل الماك فايل الموجود في المجلد الأب
-          # إذا فشل الماك فايل، سنقوم ببناء ملف ELF تجريبي للتأكد من الكود
-          make -f ../Makefile clean || true
-          make -f ../Makefile || ppu-lv2-g++ -O2 -Wall *.cpp -o ../ultrabrowser.elf -I. -I$PSL1GHT/include -L$PSL1GHT/lib -lpsl1ght -lnet -lsysmodule
+          # أمر البناء المباشر (يجمع كل الملفات .cpp مرة واحدة)
+          ppu-lv2-g++ -O2 -Wall *.cpp -o ../browser.elf \
+            -I. -I/usr/local/ps3dev/psl1ght/include \
+            -L/usr/local/ps3dev/psl1ght/lib \
+            -lpsl1ght -lnet -lsysmodule -bio
+          
+          echo "✅ تم إنشاء ملف browser.elf بنجاح"
 
-      - name: Create PKG
+      - name: تحويل الملف إلى PKG
         run: |
-          export PATH=/usr/local/ps3dev/bin:$PATH
-          # أمر تحويل الـ ELF إلى PKG (يفترض وجود الأداة في الـ SDK)
-          if [ -f ultrabrowser.elf ]; then
-            make_self ultrabrowser.elf EBOOT.BIN
-            # هنا نستخدم أداة صناعة الـ PKG
-            echo "📦 جاري تجميع ملف الـ PKG..."
+          # تحويل الملف الناتج لملف يفهمه البلايستيشن
+          if [ -f browser.elf ]; then
+            make_self browser.elf EBOOT.BIN
+            echo "📦 الملف جاهز للنقل!"
           fi
 
-      - name: Upload Artifacts
+      - name: رفع النتائج لهاتفك
         uses: actions/upload-artifact@v4
         with:
-          name: PS3-UltraBrowser-Package
+          name: UltraBrowser-Output
           path: |
+            browser.elf
+            EBOOT.BIN
             *.pkg
-            *.elf
-            *.self
-            Source/
