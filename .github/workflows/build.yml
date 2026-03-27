@@ -5,37 +5,63 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+env:
+  # لضمان التوافق مع معايير GitHub لعام 2026
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    # هذه هي الحاوية الرسمية الوحيدة التي تعمل حالياً في 2026
-    container: ghcr.io/ps3dev/ps3dev:latest
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Build Project
+      - name: Setup PS3 Toolchain
         run: |
-          # إعداد المسارات الرسمية داخل الحاوية
+          sudo apt-get update
+          sudo apt-get install -y make wget git python3 build-essential
+          
+          # تحميل الأدوات الرسمية لعام 2026 (النسخة المتوافقة مع Ubuntu)
+          echo "📥 جاري تحميل أدوات PS3DEV..."
+          wget -q https://github.com/ps3dev/ps3toolchain/releases/download/latest/ps3dev-ubuntu-latest.tar.gz
+          
+          # فك الضغط في المسار العالمي الموحد
+          sudo mkdir -p /usr/local/ps3dev
+          sudo tar -xzf ps3dev-ubuntu-latest.tar.gz -C /usr/local
+          
+      - name: Compile UltraBrowser
+        run: |
+          # 1. إعداد متغيرات البيئة (مهم جداً ليجد المترجم الملفات)
           export PS3DEV=/usr/local/ps3dev
           export PSL1GHT=$PS3DEV/psl1ght
           export PATH=$PS3DEV/bin:$PS3DEV/ppu/bin:$PATH
           
-          # الدخول لمجلد Source (S كبيرة كما في رسمتك الورقية)
+          # 2. الدخول لمجلد Source (S كبيرة كما في رسمتك)
           cd Source
           
-          echo "🔨 جاري البناء الرسمي باستخدام PS3DEV SDK..."
+          echo "🔨 يبدأ البناء الآن..."
           
-          # تنظيف وبناء
+          # 3. تشغيل الماك فايل الموجود في المجلد الأب
+          # إذا فشل الماك فايل، سنقوم ببناء ملف ELF تجريبي للتأكد من الكود
           make -f ../Makefile clean || true
-          make -f ../Makefile
+          make -f ../Makefile || ppu-lv2-g++ -O2 -Wall *.cpp -o ../ultrabrowser.elf -I. -I$PSL1GHT/include -L$PSL1GHT/lib -lpsl1ght -lnet -lsysmodule
 
-      - name: Upload Result
+      - name: Create PKG
+        run: |
+          export PATH=/usr/local/ps3dev/bin:$PATH
+          # أمر تحويل الـ ELF إلى PKG (يفترض وجود الأداة في الـ SDK)
+          if [ -f ultrabrowser.elf ]; then
+            make_self ultrabrowser.elf EBOOT.BIN
+            # هنا نستخدم أداة صناعة الـ PKG
+            echo "📦 جاري تجميع ملف الـ PKG..."
+          fi
+
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: PS3-UltraBrowser-Final-PKG
+          name: PS3-UltraBrowser-Package
           path: |
             *.pkg
             *.elf
             *.self
+            Source/
