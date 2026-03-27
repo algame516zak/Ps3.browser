@@ -1,18 +1,15 @@
-name: Build PS3 UltraBrowser (mlafeldt Edition)
+name: Build PS3 UltraBrowser Final
 
 on:
   push:
     branches: [ main, master ]
   workflow_dispatch:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   build:
     runs-on: ubuntu-latest
-    # نستخدم الصورة التي وجدتها في بحثك الذكي
-    container: mlafeldt/ps3dev:latest
+    # هذه هي الحاوية الرسمية الوحيدة التي تعمل حالياً في 2026
+    container: ghcr.io/ps3dev/ps3dev:latest
 
     steps:
       - name: Checkout Code
@@ -20,26 +17,25 @@ jobs:
 
       - name: Build Project
         run: |
-          # الدخول لمجلد Source (S كبيرة كما في رسمتك)
-          cd Source
-          
-          # إعداد البيئة (هذه الصورة عادة تضع الأدوات في هذا المسار)
+          # إعداد المسارات الرسمية داخل الحاوية
           export PS3DEV=/usr/local/ps3dev
           export PSL1GHT=$PS3DEV/psl1ght
           export PATH=$PS3DEV/bin:$PS3DEV/ppu/bin:$PATH
           
-          echo "🔨 يبدأ البناء باستخدام أدوات mlafeldt..."
+          # الدخول لمجلد Source (S كبيرة كما في رسمتك الورقية)
+          cd Source
           
-          # محاولة البناء
+          echo "🔨 جاري البناء الرسمي باستخدام PS3DEV SDK..."
+          
+          # تنظيف وبناء
           make -f ../Makefile clean || true
           make -f ../Makefile
 
       - name: Upload Result
         uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: PS3-UltraBrowser-mlafeldt
+          name: PS3-UltraBrowser-Final-PKG
           path: |
             *.pkg
             *.elf
-            Source/
+            *.self
