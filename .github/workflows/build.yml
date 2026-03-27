@@ -9,20 +9,22 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # استخدام الحاوية الرسمية والمجربة 100%
-    container: ghcr.io/ps3dev/ps3dev:master
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install Build Tools
+      # استخدام الأكشن الرسمي لمجتمع PS3DEV
+      - name: Setup PSL1GHT SDK
+        uses: ps3dev/setup-ps3dev@master
+
+      - name: Install Dependencies
         run: |
-          apk add --no-cache make git g++
-          
+          sudo apt-get update
+          sudo apt-get install -y make gcc g++ git
+
       - name: Compile Project
         run: |
-          # التأكد من تنظيف الملفات القديمة وبدء البناء
+          # تنظيف وبناء المشروع باستخدام الماك فايل في الجذر
           make clean
           make
 
@@ -30,4 +32,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: PS3-UltraBrowser-Package
-          path: ultrabrowser.pkg
+          path: "*.pkg" # سيبحث عن أي ملف pkg ناتج
